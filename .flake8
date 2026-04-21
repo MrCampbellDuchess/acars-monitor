@@ -1,0 +1,7 @@
+[flake8]
+max-line-length = 99
+# acars-web.py embeds a minified HTML/CSS/JS template as a Python string.
+# Those lines cannot be wrapped without breaking the rendered output, so E501
+# is suppressed for that file only. All other rules apply.
+per-file-ignores =
+    acars-web.py: E501

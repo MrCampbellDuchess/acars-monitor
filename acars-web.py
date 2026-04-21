@@ -9,6 +9,7 @@ import psutil
 from datetime import date, datetime
 from flask import Flask, Response, jsonify, request, send_file
 
+
 # Load user config from ~/acars_config.py if present, otherwise use defaults.
 def _load_cfg():
     path = os.path.expanduser("~/acars_config.py")
@@ -19,22 +20,25 @@ def _load_cfg():
     spec.loader.exec_module(m)
     return m
 
-_cfg = _load_cfg()
+
 def _c(attr, default):
     return getattr(_cfg, attr, default) if _cfg else default
 
-LOG_DIR       = _c("LOG_DIR",       "/home/pi/acars_logs")
-PORT          = _c("PORT",           8080)
-MAP_CENTER    = _c("MAP_CENTER",     [54.45, -122.7])
-MAP_ZOOM      = _c("MAP_ZOOM",       7)
-TRACK_MAX_AGE = _c("TRACK_MAX_AGE",  86400)
-FREQUENCIES   = _c("FREQUENCIES",   ["131.550", "130.025", "129.125", "131.475"])
+
+_cfg = _load_cfg()
+
+LOG_DIR = _c("LOG_DIR", "/home/pi/acars_logs")
+PORT = _c("PORT", 8080)
+MAP_CENTER = _c("MAP_CENTER", [54.45, -122.7])
+MAP_ZOOM = _c("MAP_ZOOM", 7)
+TRACK_MAX_AGE = _c("TRACK_MAX_AGE", 86400)
+FREQUENCIES = _c("FREQUENCIES", ["131.550", "130.025", "129.125", "131.475"])
 
 app = Flask(__name__)
 psutil.cpu_percent(interval=None)
 
-STATS_CSV    = os.path.join(LOG_DIR, "acars_stats.csv")
-CURRENT_CSV  = os.path.join(LOG_DIR, "acars_stats_current.csv")
+STATS_CSV = os.path.join(LOG_DIR, "acars_stats.csv")
+CURRENT_CSV = os.path.join(LOG_DIR, "acars_stats_current.csv")
 AIRCRAFT_CSV = os.path.join(LOG_DIR, "acars_aircraft.csv")
 
 HEADER_RE = re.compile(
@@ -102,7 +106,8 @@ def load_stats():
             if len(parts) == 6:
                 row = {"timestamp": parts[0], "date": parts[1], "hour": parts[2],
                        "message_count": parts[3], "error_count": parts[4], "error_rate": parts[5]}
-                rows = [r for r in rows if not (r["date"] == row["date"] and r["hour"] == row["hour"])]
+                rows = [r for r in rows
+                        if not (r["date"] == row["date"] and r["hour"] == row["hour"])]
                 rows.append(row)
     rows.sort(key=lambda r: (r.get("date", ""), r.get("hour", "")))
     return rows
@@ -131,13 +136,15 @@ def load_and_update_aircraft():
         for m in msgs:
             reg = m.get("aircraft_reg", "").strip()
             fid = m.get("flight_id", "").strip()
-            ts  = m.get("ts", "")
+            ts = m.get("ts", "")
             if not reg or not ts:
                 continue
             key = (reg, fid)
             if key not in aircraft:
-                aircraft[key] = {"aircraft_reg": reg, "flight_id": fid,
-                                 "first_seen": ts, "last_seen": ts, "message_count": 0}
+                aircraft[key] = {
+                    "aircraft_reg": reg, "flight_id": fid,
+                    "first_seen": ts, "last_seen": ts, "message_count": 0,
+                }
             entry = aircraft[key]
             entry["message_count"] += 1
             if ts > entry["last_seen"]:
@@ -148,7 +155,9 @@ def load_and_update_aircraft():
     # Write updated CSV
     rows = sorted(aircraft.values(), key=lambda r: r["last_seen"], reverse=True)
     with open(AIRCRAFT_CSV, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=["aircraft_reg","flight_id","first_seen","last_seen","message_count"])
+        writer = csv.DictWriter(f, fieldnames=[
+            "aircraft_reg", "flight_id", "first_seen", "last_seen", "message_count",
+        ])
         writer.writeheader()
         writer.writerows(rows)
 
@@ -170,7 +179,7 @@ def load_positions():
             continue
         reg = m.get("aircraft_reg", "")
         fid = m.get("flight_id", "")
-        ts  = m.get("ts", "")
+        ts = m.get("ts", "")
         key = (reg, fid)
         fix = {"lat": float(lat_m.group(1)), "lon": float(lon_m.group(1)), "ts": ts}
         alt_m = ALT_RE.search(body)
@@ -549,23 +558,28 @@ setInterval(fetchAircraft,30000);
 def index():
     return Response(HTML, mimetype="text/html")
 
+
 @app.get("/api/messages")
 def api_messages():
     offset = request.args.get("offset", 0, type=int)
     messages, new_offset = parse_messages(today_log(), byte_offset=offset, max_msgs=50)
     return jsonify({"messages": messages, "offset": new_offset})
 
+
 @app.get("/api/stats")
 def api_stats():
     return jsonify(load_stats())
+
 
 @app.get("/api/aircraft")
 def api_aircraft():
     return jsonify(load_and_update_aircraft())
 
+
 @app.get("/api/positions")
 def api_positions():
     return jsonify(load_positions())
+
 
 @app.get("/api/config")
 def api_config():
@@ -574,6 +588,7 @@ def api_config():
         "map_zoom": MAP_ZOOM,
         "frequencies": FREQUENCIES,
     })
+
 
 @app.get("/api/system")
 def api_system():
