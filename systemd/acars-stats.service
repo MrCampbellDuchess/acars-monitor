@@ -1,0 +1,7 @@
+[Unit]
+Description=ACARS statistics calculator
+
+[Service]
+Type=oneshot
+User=pi
+ExecStart=/usr/local/bin/acars-stats.sh

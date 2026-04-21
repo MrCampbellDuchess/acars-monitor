@@ -1,0 +1,6 @@
+[Unit]
+Description=Restart acarsdec for daily log rotation
+
+[Service]
+Type=oneshot
+ExecStart=/bin/systemctl restart acarsdec.service

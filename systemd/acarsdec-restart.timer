@@ -1,0 +1,9 @@
+[Unit]
+Description=Restart acarsdec at midnight for log rotation
+
+[Timer]
+OnCalendar=*-*-* 00:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,13 @@
+[Unit]
+Description=ACARS Web Dashboard
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+ExecStart=/usr/bin/python3 /usr/local/bin/acars-web.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

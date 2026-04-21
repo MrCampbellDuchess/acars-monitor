@@ -1,0 +1,13 @@
+[Unit]
+Description=ACARS Decoder (acarsdec)
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+ExecStart=/usr/local/bin/acarsdec-wrapper.sh
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

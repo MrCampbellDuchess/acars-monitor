@@ -1,0 +1,5 @@
+acars_logs/
+*.pyc
+__pycache__/
+*.csv
+.stats_written_*
