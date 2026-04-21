@@ -61,38 +61,37 @@ The installer copies scripts to `/usr/local/bin`, installs the six systemd units
 
 ## Configuration
 
+All user-facing settings live in `config.py` (installed to `~/acars_config.py`). Edit it before running `install.sh`, or edit `~/acars_config.py` on the Pi at any time and restart the services.
+
+```python
+LOG_DIR       = "/home/pi/acars_logs"   # where logs and CSVs are stored
+PORT          = 8080                    # web dashboard port
+MAP_CENTER    = [54.45, -122.7]         # initial map view [lat, lon]
+MAP_ZOOM      = 7                       # initial zoom level
+TRACK_MAX_AGE = 86400                   # seconds to keep tracks (86400 = 24 h)
+FREQUENCIES   = ["131.550", "130.025", "129.125", "131.475"]  # MHz
+```
+
+After editing `~/acars_config.py`:
+
+```bash
+sudo systemctl restart acars-web
+```
+
 ### Frequencies
 
-Edit `acarsdec-wrapper.sh` before installing (or edit `/usr/local/bin/acarsdec-wrapper.sh` after). The default four frequencies cover North American ACARS:
+Set `FREQUENCIES` in `config.py`. The defaults cover North American ACARS. European operators typically use `["131.725", "129.125", "130.025", "131.550"]`.
 
-```
-131.550  130.025  129.125  131.475 MHz
-```
-
-European operators typically use `131.725 129.125 130.025 131.550`.
+You must also update `acarsdec-wrapper.sh` to pass the same frequencies to the decoder — they are listed at the end of the `exec` line.
 
 ### RTL-SDR gain and device
 
-Also in `acarsdec-wrapper.sh`:
+Edit `acarsdec-wrapper.sh`:
 
 ```bash
 -g 40          # gain in dB — adjust for your antenna/location
 --rtlsdr 0     # device index if you have multiple dongles
 ```
-
-### Map default view
-
-The map opens centred on central British Columbia (`[54.45, -122.7]`, zoom 7). Change the `setView` call near the top of the `<script>` block in `acars-web.py` to suit your location:
-
-```javascript
-const map = L.map('map', {zoomControl: true}).setView([YOUR_LAT, YOUR_LON], ZOOM);
-```
-
-The map auto-fits to received position data on first load, so the default only matters when no tracks are present.
-
-### Log directory
-
-Logs are written to `/home/pi/acars_logs/` by default. Change `LOG_DIR` at the top of both `acars-web.py` and `acars-stats.sh` if you want a different path.
 
 ## Service management
 
@@ -112,6 +111,7 @@ journalctl -u acars-web -f
 
 ```
 acars-monitor/
+├── config.py               User configuration (installed to ~/acars_config.py)
 ├── acars-web.py            Flask dashboard (serves port 8080)
 ├── acarsdec-wrapper.sh     Starts acarsdec with date-stamped log file
 ├── acars-stats.sh          Hourly stats aggregator (run every 5 min)

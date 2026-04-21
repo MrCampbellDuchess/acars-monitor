@@ -4,14 +4,35 @@
 import re
 import csv
 import os
+import importlib.util
 import psutil
 from datetime import date, datetime
 from flask import Flask, Response, jsonify, request, send_file
 
+# Load user config from ~/acars_config.py if present, otherwise use defaults.
+def _load_cfg():
+    path = os.path.expanduser("~/acars_config.py")
+    if not os.path.exists(path):
+        return None
+    spec = importlib.util.spec_from_file_location("acars_config", path)
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    return m
+
+_cfg = _load_cfg()
+def _c(attr, default):
+    return getattr(_cfg, attr, default) if _cfg else default
+
+LOG_DIR       = _c("LOG_DIR",       "/home/pi/acars_logs")
+PORT          = _c("PORT",           8080)
+MAP_CENTER    = _c("MAP_CENTER",     [54.45, -122.7])
+MAP_ZOOM      = _c("MAP_ZOOM",       7)
+TRACK_MAX_AGE = _c("TRACK_MAX_AGE",  86400)
+FREQUENCIES   = _c("FREQUENCIES",   ["131.550", "130.025", "129.125", "131.475"])
+
 app = Flask(__name__)
 psutil.cpu_percent(interval=None)
 
-LOG_DIR = "/home/pi/acars_logs"
 STATS_CSV    = os.path.join(LOG_DIR, "acars_stats.csv")
 CURRENT_CSV  = os.path.join(LOG_DIR, "acars_stats_current.csv")
 AIRCRAFT_CSV = os.path.join(LOG_DIR, "acars_aircraft.csv")
@@ -169,7 +190,7 @@ def load_positions():
         last_ts = t["fixes"][-1]["ts"]
         try:
             last_dt = datetime.fromisoformat(last_ts.rstrip("Z"))
-            if (now - last_dt).total_seconds() > 86400:
+            if (now - last_dt).total_seconds() > TRACK_MAX_AGE:
                 continue
         except ValueError:
             pass
@@ -504,7 +525,17 @@ function tick(){
   fetchSystem();
 }
 
-fetchMsgs();fetchPositions();fetchAircraft();fetchSystem();
+async function fetchConfig(){
+  try{
+    const r=await fetch('/api/config');
+    if(!r.ok)return;
+    const cfg=await r.json();
+    map.setView(cfg.map_center,cfg.map_zoom);
+    document.querySelector('.freqs').textContent=cfg.frequencies.join(' · ')+' MHz';
+  }catch(e){}
+}
+
+fetchConfig();fetchMsgs();fetchPositions();fetchAircraft();fetchSystem();
 setInterval(tick,5000);
 setInterval(fetchPositions,30000);
 setInterval(fetchAircraft,30000);
@@ -536,6 +567,14 @@ def api_aircraft():
 def api_positions():
     return jsonify(load_positions())
 
+@app.get("/api/config")
+def api_config():
+    return jsonify({
+        "map_center": MAP_CENTER,
+        "map_zoom": MAP_ZOOM,
+        "frequencies": FREQUENCIES,
+    })
+
 @app.get("/api/system")
 def api_system():
     mem = psutil.virtual_memory()
@@ -558,4 +597,4 @@ def download_messages():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8080, debug=False)
+    app.run(host="0.0.0.0", port=PORT, debug=False)

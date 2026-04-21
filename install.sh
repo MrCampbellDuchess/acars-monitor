@@ -10,6 +10,15 @@ INSTALL_USER="${SUDO_USER:-pi}"
 echo "==> Installing Python dependencies"
 pip3 install flask psutil
 
+echo "==> Installing config file"
+CFG_DEST="/home/${INSTALL_USER}/acars_config.py"
+if [ -f "$CFG_DEST" ]; then
+    echo "    $CFG_DEST already exists — skipping (delete it to reset to defaults)"
+else
+    install -m 644 -o "$INSTALL_USER" config.py "$CFG_DEST"
+    echo "    Installed to $CFG_DEST — edit before starting services"
+fi
+
 echo "==> Creating log directory"
 mkdir -p /home/"$INSTALL_USER"/acars_logs
 
